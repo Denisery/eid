@@ -1,37 +1,52 @@
-# WhatsApp Auto-Reply Bot
+# WhatsApp Bot with Baileys & Express
 
-This is a WhatsApp bot built using [Baileys](https://github.com/WhiskeySockets/Baileys) that automatically replies with **"Eid Mubarak Bhai! 🌙✨"** when someone sends a message containing **"Eid"** or **"Mubarak"**. The bot also runs a web server to show its uptime and status.
+This WhatsApp bot is built using [@whiskeysockets/baileys](https://github.com/WhiskeySockets/Baileys) for handling WhatsApp Web connections and Express.js for managing a web interface.
 
 ## Features
-- Automatically replies to messages containing **"Eid"** or **"Mubarak"**
-- Displays QR code in the terminal for authentication
-- Keeps the session active to avoid re-scanning QR codes frequently
-- Provides a `/` route to check bot status and uptime
+✅ Automatically responds to messages containing "Eid Mubarak" with a festive greeting.  
+✅ Generates a QR Code for WhatsApp Web login.  
+✅ Provides an Express server with useful API routes.  
+✅ Protected QR Code endpoint with PIN authentication.  
+✅ Displays bot uptime and status.  
+✅ Automatically reconnects if the connection is lost.
 
-## Installation
-1. Clone this repository:
-   ```sh
-   git clone https://github.com/Denisery/eid.git
-   cd whatsapp-bot
-   ```
-2. Install dependencies:
-   ```sh
-   npm install
-   ```
-3. Run the bot:
-   ```sh
-   npm run dev
-   ```
-4. Scan the QR code with WhatsApp to authenticate.
+## Installation & Setup
+### 1. Clone the Repository
+```sh
+git clone https://github.com/Denisery/eid.git
+cd eid
+```
 
-## API Route
-- **GET /** → Returns bot status and uptime
+### 2. Install Dependencies
+```sh
+npm install
+```
 
-## Requirements
-- Node.js (v16+ recommended)
-- A WhatsApp account
-- Stable internet connection
+### 3. Configure Environment
+1. in root directory copy variables from file .env.sample to .env file
+2. Set the `PORT` and `QR_PIN`.
+
+### 5. Start the Bot
+```sh
+npm run dev
+```
+#### Go to `http://localhost:3000/qr-code?pin=your-qr-pin` to scan the QR code.
+
+## API Endpoints
+### 1. Check Bot Status
+**GET /**  
+Returns the bot’s running status and uptime.
+
+### 2. Get QR Code for Login
+**GET /qr-code?pin=your-qr-pin**  
+Displays the WhatsApp login QR Code. Requires a valid PIN for access.
+
+
+## Notes
+- The bot automatically retries connection if it gets disconnected.
+- The QR code is only available when required; once connected, it disappears.
+- Keep the `auth_info` folder secure to maintain your WhatsApp session.
 
 ## License
-This project is open-source and free to use.
+This project is open-source and available for modifications.
 

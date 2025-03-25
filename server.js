@@ -1,32 +1,12 @@
-const express = require("express");
+require('dotenv').config()
 const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys");
-const qrcode = require("qrcode-terminal");
+const qrcode = require("qrcode");
+const express = require("express");
 
 const app = express();
-const startTime = Date.now();
-
-function formatUptime(ms) {
-    let seconds = Math.floor(ms / 1000);
-    let minutes = Math.floor(seconds / 60);
-    let hours = Math.floor(minutes / 60);
-    let days = Math.floor(hours / 24);
-
-    seconds %= 60;
-    minutes %= 60;
-    hours %= 24;
-
-    return `${days} days, ${hours}h:${minutes}m:${seconds}s`;
-}
-
-app.get("/", (req, res) => {
-    res.status(200).json({
-        server_status: "Bot is running",
-        uptime: formatUptime(Date.now() - startTime)
-    });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 4000;
+const QR_PIN = process.env.QR_PIN;
+let latestQR = null;
 
 async function connectWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
@@ -42,27 +22,27 @@ async function connectWhatsApp() {
         const { qr, connection } = update;
 
         if (qr) {
-            console.log("Scan the QR Code below with WhatsApp:");
-            qrcode.generate(qr, { small: true });
+            latestQR = qr;
+            console.log(`✅ QR Code generated. Visit: http://localhost:${PORT}/qr-code?pin=${QR_PIN} to scan.`);
         }
 
         if (connection === "open") {
             console.log("✅ WhatsApp Bot Connected!");
+            latestQR = null;
         } else if (connection === "close") {
             console.log("❌ Connection closed! Restarting...");
-            connectWhatsApp();
+            latestQR = null;
+            setTimeout(connectWhatsApp, 10000);
         }
     });
 
     sock.ev.on("messages.upsert", async (m) => {
         const message = m.messages[0];
-
         if (!message.key.fromMe && message.message?.conversation) {
             const text = message.message.conversation.toLowerCase();
-
-            if (text.includes("eid") || text.includes("mubarak") || text.includes("eid mubarak")) {
+            if (text.includes("eid") || text.includes("mubarak")) {
                 await sock.sendMessage(message.key.remoteJid, {
-                    text: "Eid Mubarak Bhai! 🌙✨\n May Allah accept (good deeds) from us and from you.💫"
+                    text: "Eid Mubarak Bhai! 🌙✨\nMay Allah accept (good deeds) from us and from you.💫"
                 });
             }
         }
@@ -70,5 +50,47 @@ async function connectWhatsApp() {
 
     return sock;
 }
+
+// Express Routes
+
+// Status Route
+app.get("/", (req, res) => {
+    const uptime = process.uptime();
+    const days = Math.floor(uptime / (3600 * 24));
+    const hours = Math.floor((uptime % (3600 * 24)) / 3600);
+    const minutes = Math.floor((uptime % 3600) / 60);
+    const seconds = Math.floor(uptime % 60);
+
+    res.json({
+        status: "Bot is running",
+        uptime: `${days} days, ${hours}h: ${minutes}m: ${seconds}s`
+    });
+});
+
+// QR Code Route (Protected with PIN)
+app.get("/qr-code", async (req, res) => {
+    const userPin = req.query.pin;
+    if (userPin !== QR_PIN) {
+        return res.status(403).send("Access Denied: Invalid PIN");
+    }
+
+    if (!latestQR) {
+        console.log("⚠️ No QR Code available at the moment.");
+        return res.status(404).send("QR Code not available. Wait for it to generate.");
+    }
+
+    try {
+        const qrImage = await qrcode.toDataURL(latestQR);
+        res.send(`<img src="${qrImage}" alt="Scan this QR code to connect to WhatsApp"/>`);
+    } catch (err) {
+        console.error("⚠️ Error generating QR Code:", err);
+        res.status(500).send("Error generating QR Code.");
+    }
+});
+
+// Start Express Server
+app.listen(PORT, () => {
+    console.log(`🌍 Server is running on port ${PORT}`);
+});
 
 connectWhatsApp();
